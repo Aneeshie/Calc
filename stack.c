@@ -33,13 +33,16 @@ double popDouble(struct DoubleStack *st) {
     return 0.0;
 }
 
-
-
-
 void createStack(struct Stack *st, int size) {
     st->items = (char**)malloc(size * sizeof(char*));
     st->top = -1;
     st->maxSize = size;
+}
+
+void clearStack(struct Stack *st) {
+    while (st->top >= 0) {
+        free(st->items[st->top--]);
+    }
 }
 
 void push(struct Stack *st, const char *str) {
@@ -65,8 +68,10 @@ int precedence(const char *op) {
             case '+':
             case '-': return 1;
             case '*':
+	    case '%':
             case '/': return 2;
             case '^': return 3;
+		     
         }
     }
     return 0;
@@ -86,14 +91,16 @@ char* convertToPostFix(const char *exp) {
     int len = strlen(exp);
     struct Stack stack;
     createStack(&stack, len);
-    
+
+    // Allocate enough memory to hold postfix expression
     char *postfix = (char*)malloc(len * 4 * sizeof(char));  // Extra space for output
     char buffer[32];  // For temporary number storage
     int j = 0;  // Output index
-    
+    memset(postfix, 0, len * 4 * sizeof(char));  // Clear previous contents
+
     for (int i = 0; i < len; i++) {
         if (isspace(exp[i])) continue;
-        
+
         // Handle numbers
         if (isdigit(exp[i]) || exp[i] == '.' || 
             (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])))) {
@@ -144,7 +151,7 @@ char* convertToPostFix(const char *exp) {
             }
         }
         // Handle operators
-        else if (strchr("+-*/^", exp[i])) {
+        else if (strchr("+-*/^%", exp[i])) {
             buffer[0] = exp[i];
             buffer[1] = '\0';
             while (!isEmpty(&stack) && 
@@ -158,7 +165,7 @@ char* convertToPostFix(const char *exp) {
             push(&stack, buffer);
         }
     }
-    
+
     // Pop remaining operators
     while (!isEmpty(&stack)) {
         char *op = pop(&stack);
@@ -168,13 +175,14 @@ char* convertToPostFix(const char *exp) {
         }
         free(op);
     }
-    
+
     // Remove trailing space if exists
     int lastIdx = strlen(postfix) - 1;
     if (lastIdx >= 0 && postfix[lastIdx] == ' ') {
         postfix[lastIdx] = '\0';
     }
-    
+
+    clearStack(&stack);  // Clear stack before returning
     return postfix;
 }
 
@@ -207,7 +215,7 @@ double evaluatePostfix(char *postfix) {
             pushDouble(&st, log(arg));
         }
         // Handle operators
-        else if (strchr("+-*/^", token[0])) {
+        else if (strchr("+-*/^%", token[0])) {
             double b = popDouble(&st);
             double a = popDouble(&st);
             switch (token[0]) {
@@ -216,6 +224,7 @@ double evaluatePostfix(char *postfix) {
                 case '*': pushDouble(&st, a * b); break;
                 case '/': pushDouble(&st, a / b); break;
                 case '^': pushDouble(&st, pow(a, b)); break;
+		case '%': pushDouble(&st, fmod(a,b)); break;
             }
         }
         token = strtok(NULL, " ");
@@ -226,17 +235,43 @@ double evaluatePostfix(char *postfix) {
     return result;
 }
 
-
-
 int main() {
-    char dflt[] = "0";
-    char expression[] = "-(-1)";
-    
-    
-    char *postfix = convertToPostFix(strcat(dflt,expression));
-    printf("Postfix: %s\n", postfix);
-    double result = evaluatePostfix(postfix);
-    printf("Result: %.2lf\n", result);  // Fixed printf syntax
-    free(postfix);
+    char expression[256];
+
+    while (1) {
+        printf("Enter an expression (or 'exit' to quit): ");
+        
+        if (fgets(expression, sizeof(expression), stdin) == NULL) {
+            fprintf(stderr, "Error reading input\n");
+            break;
+        }
+        
+        // Remove newline character
+        expression[strcspn(expression, "\n")] = 0;
+        
+        // Check for exit condition
+        if (strcmp(expression, "exit") == 0) {
+            printf("Exiting calculator...\n");
+            break;
+        }
+        
+        // Skip empty input
+        if (strlen(expression) == 0) {
+            continue;
+        }
+        
+        char *postfix = convertToPostFix(expression);
+        if (postfix) {
+            printf("Postfix: %s\n", postfix);
+            double result = evaluatePostfix(postfix);
+            printf("Result: %.2lf\n", result);
+            free(postfix);
+        } else {
+            fprintf(stderr, "Error converting expression to postfix\n");
+        }
+
+        printf("\n");  // Add a blank line for readability
+    }
+
     return 0;
 }
