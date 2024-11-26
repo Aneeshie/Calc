@@ -1,15 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
+#include <string.h>
 #include <math.h>
 
-#define MAX_EXPR_LENGTH 100
-
-struct CharStack {
+struct Stack {
+    char **items;  // Array of strings instead of chars
     int top;
-    int size;
-    char *S;
+    int maxSize;
 };
 
 struct DoubleStack {
@@ -18,124 +16,165 @@ struct DoubleStack {
     double *S;
 };
 
-void createCharStack(struct CharStack *st, int size) {
-    st->top = -1;
-    st->size = size;
-    st->S = (char *)malloc(size * sizeof(char));
-}
-
 void createDoubleStack(struct DoubleStack *st, int size) {
     st->top = -1;
     st->size = size;
     st->S = (double *)malloc(size * sizeof(double));
 }
 
-void pushChar(struct CharStack *st, char ch) {
-    st->S[++(st->top)] = ch;
-}
-
 void pushDouble(struct DoubleStack *st, double value) {
     st->S[++(st->top)] = value;
 }
 
-char popChar(struct CharStack *st) {
-    return st->S[(st->top)--];
-}
-
 double popDouble(struct DoubleStack *st) {
-    return st->S[(st->top)--];
+    if (st->top >= 0) {
+        return st->S[(st->top)--];
+    }
+    return 0.0;
 }
 
-int isEmptyCharStack(struct CharStack *st) {
+
+
+
+void createStack(struct Stack *st, int size) {
+    st->items = (char**)malloc(size * sizeof(char*));
+    st->top = -1;
+    st->maxSize = size;
+}
+
+void push(struct Stack *st, const char *str) {
+    if (st->top < st->maxSize - 1) {
+        st->items[++(st->top)] = strdup(str);
+    }
+}
+
+char* pop(struct Stack *st) {
+    if (st->top >= 0) {
+        return st->items[st->top--];
+    }
+    return NULL;
+}
+
+int isEmpty(struct Stack *st) {
     return st->top == -1;
 }
 
-int isFunction(char ch) {
-    return ch == 's' || ch == 'c' || ch == 't' || ch == 'l';
-}
-
-int precedence(char op) {
-    if (op == '+' || op == '-') return 1;
-    if (op == '*' || op == '/') return 2;
-    if (op == '^') return 3;
+int precedence(const char *op) {
+    if (strlen(op) == 1) {
+        switch (op[0]) {
+            case '+':
+            case '-': return 1;
+            case '*':
+            case '/': return 2;
+            case '^': return 3;
+        }
+    }
     return 0;
 }
 
-int checkValidity(char ch) {
-   
-    if (isdigit(ch) || ch == '.' || ch == '-' ||
-        ch == 's' || ch == 'c' || ch == 't' || ch == 'l' || 
-        strchr("+-*/^()", ch)) { 
-        return 1;  
+int isFunction(const char *exp, int i) {
+    const char *funcs[] = {"sin", "cos", "tan", "log"};
+    for (int j = 0; j < 4; j++) {
+        if (strncmp(exp + i, funcs[j], 3) == 0) {
+            return 1;
+        }
     }
-    return 0;  
+    return 0;
 }
 
-char *convertToPostFix(char *exp) {
+char* convertToPostFix(const char *exp) {
     int len = strlen(exp);
-    struct CharStack st;
-    createCharStack(&st, len);
-    pushChar(&st, '$');  
-
-    char *postfix = (char *)malloc((len * 2 + 1) * sizeof(char));
-    int i = 0, j = 0;
-
-    while (i < len) {
-
-        if (isspace(exp[i])) {
-            i++;
-            continue;
-        }
-
-        if(!checkValidity(exp[i])) {
-            printf("Invalid character '%c'\n", exp[i]);
-            free(postfix);
-            return NULL;
-        }
-        // Numbers (including negative)
+    struct Stack stack;
+    createStack(&stack, len);
+    
+    char *postfix = (char*)malloc(len * 4 * sizeof(char));  // Extra space for output
+    char buffer[32];  // For temporary number storage
+    int j = 0;  // Output index
+    
+    for (int i = 0; i < len; i++) {
+        if (isspace(exp[i])) continue;
+        
+        // Handle numbers
         if (isdigit(exp[i]) || exp[i] == '.' || 
-            (exp[i] == '-' && (i == 0 || exp[i - 1] == '(' || strchr("+-*/^", exp[i - 1])))) {
-            int start = i;
-            i++;
-            while (i < len && (isdigit(exp[i]) || exp[i] == '.')) {
-                i++;
+            (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])))) {
+            int k = 0;
+            while (i < len && (isdigit(exp[i]) || exp[i] == '.' || 
+                   (k == 0 && exp[i] == '-'))) {
+                buffer[k++] = exp[i++];
             }
-            strncpy(&postfix[j], &exp[start], i - start);
-            j += i - start;
-            postfix[j++] = ' ';
-        } 
-        // Functions
-        else if (isFunction(exp[i])) {
-            pushChar(&st, exp[i++]);
-        } 
-        // Parentheses
+            i--;  // Back up one character
+            buffer[k] = '\0';
+            strcat(postfix, buffer);
+            strcat(postfix, " ");
+            j = strlen(postfix);
+        }
+        // Handle functions
+        else if (isFunction(exp, i)) {
+            char func[4] = {0};
+            strncpy(func, exp + i, 3);
+            push(&stack, func);
+            i += 2;  // Skip rest of function name
+        }
+        // Handle parentheses
         else if (exp[i] == '(') {
-            pushChar(&st, exp[i++]);
-        } 
+            buffer[0] = '(';
+            buffer[1] = '\0';
+            push(&stack, buffer);
+        }
         else if (exp[i] == ')') {
-            while (!isEmptyCharStack(&st) && st.S[st.top] != '(') {
-                postfix[j++] = popChar(&st);
-                postfix[j++] = ' ';
+            while (!isEmpty(&stack)) {
+                char *top = pop(&stack);
+                if (strcmp(top, "(") == 0) {
+                    free(top);
+                    break;
+                }
+                strcat(postfix, top);
+                strcat(postfix, " ");
+                free(top);
             }
-            if (!isEmptyCharStack(&st)) popChar(&st);
-            i++;
-        } 
-        // Operators
+            // If there's a function waiting, output it now
+            if (!isEmpty(&stack)) {
+                char *top = stack.items[stack.top];
+                if (isFunction(top, 0)) {
+                    top = pop(&stack);
+                    strcat(postfix, top);
+                    strcat(postfix, " ");
+                    free(top);
+                }
+            }
+        }
+        // Handle operators
         else if (strchr("+-*/^", exp[i])) {
-            while (!isEmptyCharStack(&st) && st.S[st.top] != '(' && precedence(st.S[st.top]) >= precedence(exp[i])) {
-                postfix[j++] = popChar(&st);
-                postfix[j++] = ' ';
+            buffer[0] = exp[i];
+            buffer[1] = '\0';
+            while (!isEmpty(&stack) && 
+                   strcmp(stack.items[stack.top], "(") != 0 && 
+                   precedence(stack.items[stack.top]) >= precedence(buffer)) {
+                char *op = pop(&stack);
+                strcat(postfix, op);
+                strcat(postfix, " ");
+                free(op);
             }
-            pushChar(&st, exp[i++]);
+            push(&stack, buffer);
         }
     }
-
-    while (!isEmptyCharStack(&st) && st.S[st.top] != '$') {
-        postfix[j++] = popChar(&st);
-        postfix[j++] = ' ';
+    
+    // Pop remaining operators
+    while (!isEmpty(&stack)) {
+        char *op = pop(&stack);
+        if (strcmp(op, "(") != 0) {  // Ignore any remaining parentheses
+            strcat(postfix, op);
+            strcat(postfix, " ");
+        }
+        free(op);
     }
-    postfix[j] = '\0';
-
+    
+    // Remove trailing space if exists
+    int lastIdx = strlen(postfix) - 1;
+    if (lastIdx >= 0 && postfix[lastIdx] == ' ') {
+        postfix[lastIdx] = '\0';
+    }
+    
     return postfix;
 }
 
@@ -145,19 +184,29 @@ double evaluatePostfix(char *postfix) {
 
     char *token = strtok(postfix, " ");
     while (token != NULL) {
+        // Handle numbers (including negative numbers)
         if (isdigit(token[0]) || token[0] == '.' || 
             (token[0] == '-' && (isdigit(token[1]) || token[1] == '.'))) {
             pushDouble(&st, atof(token));
         } 
-        else if (isFunction(token[0])) {
+        // Handle functions
+        else if (strncmp(token, "sin", 3) == 0) {
             double arg = popDouble(&st);
-            switch (token[0]) {
-                case 's': pushDouble(&st, sin(arg)); break;
-                case 'c': pushDouble(&st, cos(arg)); break;
-                case 't': pushDouble(&st, tan(arg)); break;
-                case 'l': pushDouble(&st, log(arg)); break;
-            }
-        } 
+            pushDouble(&st, sin(arg));
+        }
+        else if (strncmp(token, "cos", 3) == 0) {
+            double arg = popDouble(&st);
+            pushDouble(&st, cos(arg));
+        }
+        else if (strncmp(token, "tan", 3) == 0) {
+            double arg = popDouble(&st);
+            pushDouble(&st, tan(arg));
+        }
+        else if (strncmp(token, "log", 3) == 0) {
+            double arg = popDouble(&st);
+            pushDouble(&st, log(arg));
+        }
+        // Handle operators
         else if (strchr("+-*/^", token[0])) {
             double b = popDouble(&st);
             double a = popDouble(&st);
@@ -172,25 +221,22 @@ double evaluatePostfix(char *postfix) {
         token = strtok(NULL, " ");
     }
 
-    return popDouble(&st);
+    double result = popDouble(&st);
+    free(st.S);  // Free the stack memory
+    return result;
 }
 
+
+
 int main() {
-    char infix[1000];
+    char dflt[] = "0";
+    char expression[] = "-(-1)";
     
-    while(1){
-        printf("=> ");
-        scanf("%[^\n]%*c", infix);
-
-        if(strcmp(infix,"exit")==0)break;
-
-        char *postFix = convertToPostFix(infix); 
-        if(postFix == NULL){
-            continue;
-        }else{
-            double result = evaluatePostfix(postFix);
-            printf("Result: %.2f\n", result);
-            free(postFix);
-        }
-    }
+    
+    char *postfix = convertToPostFix(strcat(dflt,expression));
+    printf("Postfix: %s\n", postfix);
+    double result = evaluatePostfix(postfix);
+    printf("Result: %.2lf\n", result);  // Fixed printf syntax
+    free(postfix);
+    return 0;
 }
