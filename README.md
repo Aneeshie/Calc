@@ -2,14 +2,10 @@
 
 it can handle expressions involving all arthmetic operations, trignometric functions(angle in radians), logarithmic function
 
-to use sin or cos or tan use s() instead of sin() similarilty for other trigno functions and for log, use l() 
 
-for example 
+for example:
 
-=>(7 - 4) * ((10 / 2) + 3) 
-Result: 24.00
+input: (sin(1.57))^2 + (cos(1.57))^2
+output: 1.00
 
-=> s(3.14)
-Result: 0.00
-
-Current issue: arthmetic sum of two trigno functions
+and other complex expressions as well
