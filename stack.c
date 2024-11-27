@@ -5,7 +5,7 @@
 #include <math.h>
 
 struct Stack {
-    char **items;  // Array of strings instead of chars
+    char **items;  
     int top;
     int maxSize;
 };
@@ -92,16 +92,16 @@ char* convertToPostFix(const char *exp) {
     struct Stack stack;
     createStack(&stack, len);
 
-    // Allocate enough memory to hold postfix expression
-    char *postfix = (char*)malloc(len * 4 * sizeof(char));  // Extra space for output
-    char buffer[32];  // For temporary number storage
-    int j = 0;  // Output index
-    memset(postfix, 0, len * 4 * sizeof(char));  // Clear previous contents
+
+    char *postfix = (char*)malloc(len * 4 * sizeof(char)); 
+    char buffer[32];  
+    int j = 0; 
+    memset(postfix, 0, len * 4 * sizeof(char));  
 
     for (int i = 0; i < len; i++) {
         if (isspace(exp[i])) continue;
 
-        // Handle numbers
+        
         if (isdigit(exp[i]) || exp[i] == '.' || 
             (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])))) {
             int k = 0;
@@ -109,20 +109,20 @@ char* convertToPostFix(const char *exp) {
                    (k == 0 && exp[i] == '-'))) {
                 buffer[k++] = exp[i++];
             }
-            i--;  // Back up one character
+            i--;  
             buffer[k] = '\0';
             strcat(postfix, buffer);
             strcat(postfix, " ");
             j = strlen(postfix);
         }
-        // Handle functions
+        
         else if (isFunction(exp, i)) {
             char func[4] = {0};
             strncpy(func, exp + i, 3);
             push(&stack, func);
-            i += 2;  // Skip rest of function name
+            i += 2;  
         }
-        // Handle parentheses
+       
         else if (exp[i] == '(') {
             buffer[0] = '(';
             buffer[1] = '\0';
@@ -139,7 +139,7 @@ char* convertToPostFix(const char *exp) {
                 strcat(postfix, " ");
                 free(top);
             }
-            // If there's a function waiting, output it now
+           
             if (!isEmpty(&stack)) {
                 char *top = stack.items[stack.top];
                 if (isFunction(top, 0)) {
@@ -150,7 +150,7 @@ char* convertToPostFix(const char *exp) {
                 }
             }
         }
-        // Handle operators
+        
         else if (strchr("+-*/^%", exp[i])) {
             buffer[0] = exp[i];
             buffer[1] = '\0';
@@ -166,23 +166,23 @@ char* convertToPostFix(const char *exp) {
         }
     }
 
-    // Pop remaining operators
+    
     while (!isEmpty(&stack)) {
         char *op = pop(&stack);
-        if (strcmp(op, "(") != 0) {  // Ignore any remaining parentheses
+        if (strcmp(op, "(") != 0) {  
             strcat(postfix, op);
             strcat(postfix, " ");
         }
         free(op);
     }
 
-    // Remove trailing space if exists
+    
     int lastIdx = strlen(postfix) - 1;
     if (lastIdx >= 0 && postfix[lastIdx] == ' ') {
         postfix[lastIdx] = '\0';
     }
 
-    clearStack(&stack);  // Clear stack before returning
+    clearStack(&stack);  
     return postfix;
 }
 
@@ -192,12 +192,12 @@ double evaluatePostfix(char *postfix) {
 
     char *token = strtok(postfix, " ");
     while (token != NULL) {
-        // Handle numbers (including negative numbers)
+       
         if (isdigit(token[0]) || token[0] == '.' || 
             (token[0] == '-' && (isdigit(token[1]) || token[1] == '.'))) {
             pushDouble(&st, atof(token));
         } 
-        // Handle functions
+        
         else if (strncmp(token, "sin", 3) == 0) {
             double arg = popDouble(&st);
             pushDouble(&st, sin(arg));
@@ -214,7 +214,7 @@ double evaluatePostfix(char *postfix) {
             double arg = popDouble(&st);
             pushDouble(&st, log(arg));
         }
-        // Handle operators
+       
         else if (strchr("+-*/^%", token[0])) {
             double b = popDouble(&st);
             double a = popDouble(&st);
@@ -231,7 +231,7 @@ double evaluatePostfix(char *postfix) {
     }
 
     double result = popDouble(&st);
-    free(st.S);  // Free the stack memory
+    free(st.S);  
     return result;
 }
 
@@ -239,23 +239,23 @@ int main() {
     char expression[256];
 
     while (1) {
-        printf("Enter an expression (or 'exit' to quit): ");
+        printf("=> ");
         
         if (fgets(expression, sizeof(expression), stdin) == NULL) {
             fprintf(stderr, "Error reading input\n");
             break;
         }
         
-        // Remove newline character
+      
         expression[strcspn(expression, "\n")] = 0;
         
-        // Check for exit condition
+        
         if (strcmp(expression, "exit") == 0) {
             printf("Exiting calculator...\n");
             break;
         }
         
-        // Skip empty input
+        
         if (strlen(expression) == 0) {
             continue;
         }
@@ -270,7 +270,7 @@ int main() {
             fprintf(stderr, "Error converting expression to postfix\n");
         }
 
-        printf("\n");  // Add a blank line for readability
+        printf("\n");  
     }
 
     return 0;
