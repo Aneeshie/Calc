@@ -186,6 +186,106 @@ char* convertToPostFix(const char *exp) {
     return postfix;
 }
 
+int isValidExpression(const char *exp) {
+    int len = strlen(exp);
+    int openParens = 0;
+    int decimalCount = 0;
+    int expectingOperand = 1; 
+    int inNumber = 0; 
+    int digitCount = 0;
+    int lastWasDigit = 0; // Track if the last character was a digit
+
+    char *functions[] = {"sin", "cos", "tan", "log", "sqrt"};
+    int numFunctions = 5;
+
+    for (int i = 0; i < len; i++) {
+        if (isspace(exp[i])) {
+            // If the last character was a digit and the current character is a space,
+            // we need to check if the next character is also a digit
+            if (lastWasDigit && i + 1 < len && isdigit(exp[i + 1])) {
+                return 0; // Invalid: consecutive numbers without operator
+            }
+            continue;
+        }
+
+        // Parenthesis 
+        if (exp[i] == '(') {
+            openParens++;
+            expectingOperand = 1; 
+            inNumber = 0; 
+            decimalCount = 0; 
+            digitCount = 0;
+            lastWasDigit = 0;
+        } else if (exp[i] == ')') {
+            openParens--;
+            if (openParens < 0) return 0; 
+            expectingOperand = 0; 
+            inNumber = 0; 
+            decimalCount = 0; 
+            digitCount = 0;
+            lastWasDigit = 0;
+        }
+        // Decimal point 
+        else if (exp[i] == '.') {
+            if (!isdigit(exp[i - 1]) || decimalCount > 0) return 0; 
+            decimalCount++;
+            inNumber = 1; 
+            lastWasDigit = 0;
+        }
+        // Operator 
+        else if (strchr("+-*/^%", exp[i])) {
+            if (expectingOperand && exp[i] != '-') return 0;
+            expectingOperand = 1; 
+            inNumber = 0; 
+            decimalCount = 0;
+            digitCount = 0;
+            lastWasDigit = 0;
+        }
+        // Function 
+        else if (isalpha(exp[i])) {
+            int isFunction = 0;
+            for (int j = 0; j < numFunctions; j++) {
+                int lenFunc = strlen(functions[j]);
+                if (strncmp(&exp[i], functions[j], lenFunc) == 0) {
+                    isFunction = 1;
+                    i += lenFunc - 1; 
+                    break;
+                }
+            }
+            if (!isFunction) return 0; 
+            expectingOperand = 1; 
+            digitCount = 0;
+            lastWasDigit = 0;
+        }
+        // Digit 
+        else if (isdigit(exp[i])) {
+            inNumber = 1;
+            digitCount++;
+            expectingOperand = 0; 
+            lastWasDigit = 1;
+
+            // Prevent consecutive numbers without operators
+            if (digitCount > 1 && !inNumber) return 0;
+        } else {
+            // Any other character
+            return 0;
+        }
+
+        // Reset digit count 
+        if (!isdigit(exp[i]) && inNumber) {
+            decimalCount = 0;
+            inNumber = 0;
+            digitCount = 0;
+        }
+    }
+
+    return (openParens == 0 && !expectingOperand);
+}
+
+
+
+
+
 double evaluatePostfix(char *postfix) {
     struct DoubleStack st;
     createDoubleStack(&st, strlen(postfix));
@@ -212,12 +312,22 @@ double evaluatePostfix(char *postfix) {
         }
         else if (strncmp(token, "log", 3) == 0) {
             double arg = popDouble(&st);
+            if(arg <= 0){
+              printf("Error: log is undefined for non-postive values \n");
+              free(st.S);
+              return NAN;
+            }
             pushDouble(&st, log(arg));
         }
        
         else if (strchr("+-*/^%", token[0])) {
             double b = popDouble(&st);
             double a = popDouble(&st);
+            if(token[0] == '/' && b == 0){
+              printf("Error: division by zero\n");
+              free(st.S);
+              return NAN;
+            }
             switch (token[0]) {
                 case '+': pushDouble(&st, a + b); break;
                 case '-': pushDouble(&st, a - b); break;
@@ -233,6 +343,7 @@ double evaluatePostfix(char *postfix) {
     double result = popDouble(&st);
     free(st.S);  
     return result;
+
 }
 
 int main() {
@@ -251,7 +362,6 @@ int main() {
         
         
         if (strcmp(expression, "exit") == 0) {
-            printf("Exiting calculator...\n");
             break;
         }
         
@@ -259,10 +369,15 @@ int main() {
         if (strlen(expression) == 0) {
             continue;
         }
+
+        if(!isValidExpression(expression)){
+          printf("Invalid expression, Please check your input\n");
+          continue;
+        }
         
         char *postfix = convertToPostFix(expression);
         if (postfix) {
-            printf("Postfix: %s\n", postfix);
+            //printf("Postfix: %s\n", postfix);
             double result = evaluatePostfix(postfix);
             printf("Result: %.2lf\n", result);
             free(postfix);
