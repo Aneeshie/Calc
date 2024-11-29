@@ -186,7 +186,39 @@ char* convertToPostFix(const char *exp) {
     return postfix;
 }
 
+int isValidDecimalSequence(const char *exp) {
+    int decimalCount = 0;
+    int i = 0;
+
+    while (exp[i] != '\0') {
+        if (isdigit(exp[i])) {
+            i++;
+            continue;
+        }
+
+        if (exp[i] == '.') {
+            decimalCount++;
+            if (decimalCount > 1) {
+                return 0; // More than one decimal point in the sequence
+            }
+        } else {
+            // Reset decimal count for non-number characters
+            decimalCount = 0;
+        }
+
+        i++;
+    }
+
+    return 1;
+}
+
+
 int isValidExpression(const char *exp) {
+    // Check for invalid decimals first
+    if (!isValidDecimalSequence(exp)) {
+        return 0; // Invalid due to multiple decimal points or invalid decimal usage
+    }
+
     int len = strlen(exp);
     int openParens = 0;
     int decimalCount = 0;
@@ -200,8 +232,7 @@ int isValidExpression(const char *exp) {
 
     for (int i = 0; i < len; i++) {
         if (isspace(exp[i])) {
-            // If the last character was a digit and the current character is a space,
-            // we need to check if the next character is also a digit
+            // Ignore spaces, but check for invalid consecutive numbers or operators
             if (lastWasDigit && i + 1 < len && isdigit(exp[i + 1])) {
                 return 0; // Invalid: consecutive numbers without operator
             }
@@ -227,9 +258,8 @@ int isValidExpression(const char *exp) {
         }
         // Decimal point 
         else if (exp[i] == '.') {
-            if (!isdigit(exp[i - 1]) || decimalCount > 0) return 0; 
+            if (!inNumber || decimalCount > 0) return 0; 
             decimalCount++;
-            inNumber = 1; 
             lastWasDigit = 0;
         }
         // Operator 
@@ -263,15 +293,12 @@ int isValidExpression(const char *exp) {
             digitCount++;
             expectingOperand = 0; 
             lastWasDigit = 1;
-
-            // Prevent consecutive numbers without operators
-            if (digitCount > 1 && !inNumber) return 0;
         } else {
-            // Any other character
-            return 0;
+            // If any character is not valid, return 0
+            return 0; // Invalid character found
         }
 
-        // Reset digit count 
+        // Reset digit count after non-digit characters
         if (!isdigit(exp[i]) && inNumber) {
             decimalCount = 0;
             inNumber = 0;
