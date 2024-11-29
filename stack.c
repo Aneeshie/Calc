@@ -92,18 +92,18 @@ char* convertToPostFix(const char *exp) {
     struct Stack stack;
     createStack(&stack, len);
 
-
-    char *postfix = (char*)malloc(len * 4 * sizeof(char)); 
-    char buffer[32];  
-    int j = 0; 
-    memset(postfix, 0, len * 4 * sizeof(char));  
+    char *postfix = (char*)malloc(len * 4 * sizeof(char));
+    char buffer[32];
+    int j = 0;
+    memset(postfix, 0, len * 4 * sizeof(char));
 
     for (int i = 0; i < len; i++) {
         if (isspace(exp[i])) continue;
 
-        
+        // Handle numbers, including negative numbers
         if (isdigit(exp[i]) || exp[i] == '.' || 
-            (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])))) {
+            (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])) && 
+             (i + 1 < len && isdigit(exp[i + 1])))) { // Ensure '-' is part of a number
             int k = 0;
             while (i < len && (isdigit(exp[i]) || exp[i] == '.' || 
                    (k == 0 && exp[i] == '-'))) {
@@ -115,19 +115,20 @@ char* convertToPostFix(const char *exp) {
             strcat(postfix, " ");
             j = strlen(postfix);
         }
-        
+        // Handle functions (e.g., sin, cos)
         else if (isFunction(exp, i)) {
             char func[4] = {0};
             strncpy(func, exp + i, 3);
             push(&stack, func);
-            i += 2;  
+            i += 2;
         }
-       
+        // Handle left parenthesis
         else if (exp[i] == '(') {
             buffer[0] = '(';
             buffer[1] = '\0';
             push(&stack, buffer);
         }
+        // Handle right parenthesis
         else if (exp[i] == ')') {
             while (!isEmpty(&stack)) {
                 char *top = pop(&stack);
@@ -139,7 +140,6 @@ char* convertToPostFix(const char *exp) {
                 strcat(postfix, " ");
                 free(top);
             }
-           
             if (!isEmpty(&stack)) {
                 char *top = stack.items[stack.top];
                 if (isFunction(top, 0)) {
@@ -150,7 +150,7 @@ char* convertToPostFix(const char *exp) {
                 }
             }
         }
-        
+        // Handle operators
         else if (strchr("+-*/^%", exp[i])) {
             buffer[0] = exp[i];
             buffer[1] = '\0';
@@ -166,7 +166,7 @@ char* convertToPostFix(const char *exp) {
         }
     }
 
-    
+    // Empty remaining stack
     while (!isEmpty(&stack)) {
         char *op = pop(&stack);
         if (strcmp(op, "(") != 0) {  
@@ -176,15 +176,16 @@ char* convertToPostFix(const char *exp) {
         free(op);
     }
 
-    
+    // Remove  space
     int lastIdx = strlen(postfix) - 1;
     if (lastIdx >= 0 && postfix[lastIdx] == ' ') {
         postfix[lastIdx] = '\0';
     }
 
-    clearStack(&stack);  
+    clearStack(&stack);
     return postfix;
 }
+
 
 int isValidDecimalSequence(const char *exp) {
     int decimalCount = 0;
@@ -199,10 +200,10 @@ int isValidDecimalSequence(const char *exp) {
         if (exp[i] == '.') {
             decimalCount++;
             if (decimalCount > 1) {
-                return 0; // More than one decimal point in the sequence
+                return 0; // More than one decimal
             }
         } else {
-            // Reset decimal count for non-number characters
+            // Reset decimal 
             decimalCount = 0;
         }
 
@@ -214,9 +215,9 @@ int isValidDecimalSequence(const char *exp) {
 
 
 int isValidExpression(const char *exp) {
-    // Check for invalid decimals first
+    //  decimals first
     if (!isValidDecimalSequence(exp)) {
-        return 0; // Invalid due to multiple decimal points or invalid decimal usage
+        return 0; 
     }
 
     int len = strlen(exp);
@@ -232,9 +233,9 @@ int isValidExpression(const char *exp) {
 
     for (int i = 0; i < len; i++) {
         if (isspace(exp[i])) {
-            // Ignore spaces, but check for invalid consecutive numbers or operators
+            // Ignore spaces check for invalid consecutive numbers or operators
             if (lastWasDigit && i + 1 < len && isdigit(exp[i + 1])) {
-                return 0; // Invalid: consecutive numbers without operator
+                return 0; //consecutive numbers without operator
             }
             continue;
         }
@@ -294,11 +295,11 @@ int isValidExpression(const char *exp) {
             expectingOperand = 0; 
             lastWasDigit = 1;
         } else {
-            // If any character is not valid, return 0
-            return 0; // Invalid character found
+            // If any character 
+            return 0; 
         }
 
-        // Reset digit count after non-digit characters
+        
         if (!isdigit(exp[i]) && inNumber) {
             decimalCount = 0;
             inNumber = 0;

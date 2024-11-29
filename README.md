@@ -1,11 +1,14 @@
 # Calc
 
-it can handle expressions involving all arthmetic operations, trignometric functions(angle in radians), logarithmic function
+To run use the calculator.exe file.
 
+straight away start off with your expression!  
 
-for example:
+type "exit" to exit the program.
 
-input: (sin(1.57))^2 + (cos(1.57))^2
-output: 1.00
+Features:
+1) can handle complex expressions involving multiple parentheses.
+2) supports sin,cos,tan and log. (use sin('in radians'), log())
 
-and other complex expressions as well
+Examples:
+![alt text](image.png)
