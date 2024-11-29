@@ -100,10 +100,10 @@ char* convertToPostFix(const char *exp) {
     for (int i = 0; i < len; i++) {
         if (isspace(exp[i])) continue;
 
-        // Handle numbers, including negative numbers
+        // Handle numbers,
         if (isdigit(exp[i]) || exp[i] == '.' || 
             (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])) && 
-             (i + 1 < len && isdigit(exp[i + 1])))) { // Ensure '-' is part of a number
+             (i + 1 < len && isdigit(exp[i + 1])))) { 
             int k = 0;
             while (i < len && (isdigit(exp[i]) || exp[i] == '.' || 
                    (k == 0 && exp[i] == '-'))) {
