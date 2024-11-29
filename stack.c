@@ -265,7 +265,7 @@ int isValidExpression(const char *exp) {
         }
         // Operator 
         else if (strchr("+-*/^%", exp[i])) {
-            if (expectingOperand && exp[i] != '-') return 0;
+            if (expectingOperand && exp[i] != '-' && exp[i] != '+') return 0;
             expectingOperand = 1; 
             inNumber = 0; 
             decimalCount = 0;
