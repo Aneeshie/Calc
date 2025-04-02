@@ -4,6 +4,8 @@
 #include <string.h>
 #include <math.h>
 
+//there are some memory leaks td..
+
 struct Stack {
     char **items;  
     int top;
@@ -101,12 +103,9 @@ char* convertToPostFix(const char *exp) {
         if (isspace(exp[i])) continue;
 
         // Handle numbers,
-        if (isdigit(exp[i]) || exp[i] == '.' || 
-            (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])) && 
-             (i + 1 < len && isdigit(exp[i + 1])))) { 
+        if (isdigit(exp[i]) || exp[i] == '.' || (exp[i] == '-' && (i == 0 || exp[i-1] == '(' || strchr("+-*/^", exp[i-1])) && (i + 1 < len && isdigit(exp[i + 1])))) { 
             int k = 0;
-            while (i < len && (isdigit(exp[i]) || exp[i] == '.' || 
-                   (k == 0 && exp[i] == '-'))) {
+            while (i < len && (isdigit(exp[i]) || exp[i] == '.' ||  (k == 0 && exp[i] == '-'))) {
                 buffer[k++] = exp[i++];
             }
             i--;  
@@ -115,7 +114,7 @@ char* convertToPostFix(const char *exp) {
             strcat(postfix, " ");
             j = strlen(postfix);
         }
-        // Handle functions (e.g., sin, cos)
+        // Handle functions like sin cos n all
         else if (isFunction(exp, i)) {
             char func[4] = {0};
             strncpy(func, exp + i, 3);
@@ -154,9 +153,7 @@ char* convertToPostFix(const char *exp) {
         else if (strchr("+-*/^%", exp[i])) {
             buffer[0] = exp[i];
             buffer[1] = '\0';
-            while (!isEmpty(&stack) && 
-                   strcmp(stack.items[stack.top], "(") != 0 && 
-                   precedence(stack.items[stack.top]) >= precedence(buffer)) {
+            while (!isEmpty(&stack) && strcmp(stack.items[stack.top], "(") != 0 && precedence(stack.items[stack.top]) >= precedence(buffer)) {
                 char *op = pop(&stack);
                 strcat(postfix, op);
                 strcat(postfix, " ");
@@ -169,7 +166,8 @@ char* convertToPostFix(const char *exp) {
     // Empty remaining stack
     while (!isEmpty(&stack)) {
         char *op = pop(&stack);
-        if (strcmp(op, "(") != 0) {  
+        if (strcmp(op, "(") != 0) 
+	{  
             strcat(postfix, op);
             strcat(postfix, " ");
         }
@@ -318,7 +316,7 @@ double evaluatePostfix(char *postfix) {
     struct DoubleStack st;
     createDoubleStack(&st, strlen(postfix));
 
-    char *token = strtok(postfix, " ");
+    char *token = strtok(postfix, " "); 
     while (token != NULL) {
        
         if (isdigit(token[0]) || token[0] == '.' || 
@@ -352,7 +350,7 @@ double evaluatePostfix(char *postfix) {
             double b = popDouble(&st);
             double a = popDouble(&st);
             if(token[0] == '/' && b == 0){
-              printf("Error: division by zero\n");
+              printf("division by zero\n");
               free(st.S);
               return NAN;
             }
@@ -411,7 +409,7 @@ int main() {
             printf("Result: %.2lf\n", result);
             free(postfix);
         } else {
-            fprintf(stderr, "Error converting expression to postfix\n");
+            fprintf(stderr, "Error conversion to postfix\n");
         }
 
         printf("\n");  
